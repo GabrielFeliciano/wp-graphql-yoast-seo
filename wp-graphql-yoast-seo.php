@@ -182,7 +182,7 @@ add_action('graphql_register_types', function () {
         'social' => array(
           'facebook' => array(
             'url' =>  trim($all['facebook_site']),
-            'defaultImage' => DataSource::resolve_post_object($all['og_default_image_id'], $context)
+            'defaultImage' => $context->get_loader('post')->load_deferred(absint($all['og_default_image_id']))
           ),
           'twitter' => array(
             'username' => trim($all['twitter_site']),
@@ -211,9 +211,9 @@ add_action('graphql_register_types', function () {
         ),
         'schema' => array(
           'companyName' => trim($all['company_name']),
-          'companyLogo' => DataSource::resolve_post_object($all['company_logo_id'], $context),
-          'personLogo' => DataSource::resolve_post_object($all['person_logo_id'], $context),
-          'logo' => DataSource::resolve_post_object($all['company_or_person'] === 'company' ? $all['company_logo_id'] : $all['person_logo_id'], $context),
+          'companyLogo' => $context->get_loader('post')->load_deferred(absint($all['company_logo_id'])),
+          'personLogo' => $context->get_loader('post')->load_deferred(absint($all['person_logo_id'])),
+          'logo' => $context->get_loader('post')->load_deferred($all['company_or_person'] === 'company' ? absint($all['company_logo_id']) : absint($all['person_logo_id'])),
           'companyOrPerson' => trim($all['company_or_person']),
         )
       );
@@ -254,10 +254,26 @@ add_action('graphql_register_types', function () {
               'metaRobotsNofollow' => trim(get_post_meta($post->ID, '_yoast_wpseo_meta-robots-nofollow', true)),
               'opengraphTitle' => trim(get_post_meta($post->ID, '_yoast_wpseo_opengraph-title', true)),
               'opengraphDescription' => trim(get_post_meta($post->ID, '_yoast_wpseo_opengraph-description', true)),
-              'opengraphImage' => DataSource::resolve_post_object(get_post_meta($post->ID, '_yoast_wpseo_opengraph-image-id', true), $context),
+              'opengraphImage' => function () use ($post, $context) {
+
+                $id =  wp_gql_seo_get_og_image(
+                  YoastSEO()->meta->for_post($post->ID)
+                    ->open_graph_images
+                );
+
+                return $context->get_loader('post')->load_deferred(absint($id));
+              },
               'twitterTitle' => trim(get_post_meta($post->ID, '_yoast_wpseo_twitter-title', true)),
               'twitterDescription' => trim(get_post_meta($post->ID, '_yoast_wpseo_twitter-description', true)),
-              'twitterImage' =>  DataSource::resolve_post_object(get_post_meta($post->ID, '_yoast_wpseo_twitter-image-id', true), $context),
+              'twitterImage' => function () use ($post, $context) {
+
+                $id = wpcom_vip_attachment_url_to_postid(
+                  YoastSEO()->meta->for_post($post->ID)
+                    ->twitter_image
+                );
+
+                return $context->get_loader('post')->load_deferred(absint($id));
+              },
               'canonical' => trim(get_post_meta($post->ID, '_yoast_wpseo_canonical', true))
             );
             wp_reset_query();
@@ -314,10 +330,10 @@ add_action('graphql_register_types', function () {
             'metaRobotsNofollow' => trim($meta['wpseo_meta-robots-nofollow']),
             'opengraphTitle' => trim($meta['wpseo_opengraph-title']),
             'opengraphDescription' => trim($meta['wpseo_opengraph-description']),
-            'opengraphImage' => DataSource::resolve_post_object($meta['wpseo_opengraph-image-id'], $context),
+            'opengraphImage' => $context->get_loader('post')->load_deferred(absint($meta['wpseo_opengraph-image-id'])),
             'twitterTitle' => trim($meta['wpseo_twitter-title']),
             'twitterDescription' => trim($meta['wpseo_twitter-description']),
-            'twitterImage' => DataSource::resolve_post_object($meta['wpseo_twitter-image-id'], $context),
+            'twitterImage' => $context->get_loader('post')->load_deferred(absint($meta['wpseo_twitter-image-id'])),
             'canonical' => trim($meta['canonical'])
           );
           wp_reset_query();
